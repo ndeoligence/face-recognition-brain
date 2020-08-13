@@ -1,8 +1,8 @@
 import React from 'react';
 
-const Rank = ()=> {
+const Rank = ({name, rank})=> {
     return <>
-        <div className={'white f3'}>{`Mat, you are ranked #7`}</div>
+        <div className={'white f3'}>{`${name}, you are ranked #${rank}`}</div>
     </>;
 }
 

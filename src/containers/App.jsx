@@ -8,6 +8,8 @@ import ImageRender from "../components/ImageRender";
 import Logo from '../components/Logo';
 import Rank from '../components/Rank';
 import './App.css';
+import SignIn from "../auth/SignIn";
+import Register from "../auth/Register";
 
 const particlesOptions = {
     particles: {
@@ -43,27 +45,73 @@ const particlesOptions = {
 
 const clarifai = new Clarifai.App({apiKey: 'a59ba2e1355547f7a6a3636902cb7e8d'})
 
+const accounts = new Map();
+
 class App extends Component {
     constructor(props) {
         super(props);
         this.state = {
             imageUrl: null,
             boxes: [],
+            route: 'login',
+            currentUser: null,
         }
     }
 
     render() {
-        let {imageUrl} = this.state;
+        let {imageUrl, route, currentUser} = this.state;
         return (
             <div className="App">
                 <Particles params={particlesOptions} className={'particles'}/>
-                <Navigation/>
-                <Logo/>
-                <Rank/>
-                <ImageLinkForm onFaceDetect={ this.showPicture }/>
-                {imageUrl? <ImageRender url={imageUrl} boxes={this.state.boxes} /> : <></>}
+                {route === 'register'?
+                <Register onSubmit={this.handleRegistration} onLoginPressed={()=> this.setRoute('login')}/> :
+                route === 'home'?
+                <>
+                    <Navigation route={route} onNavChange={this.setRoute}/>
+                    <Logo/>
+                    <Rank name={currentUser.name} rank={currentUser.rank}/>
+                    <ImageLinkForm onFaceDetect={ this.showPicture }/>
+                    {imageUrl? <ImageRender url={imageUrl} boxes={this.state.boxes} /> : <></>}
+                </> :
+                <SignIn onSubmit={this.handleLogin} onRegister={()=> this.setRoute('register')}/>
+                }
             </div>
         );
+    }
+
+    handleRegistration = (email, pw, name)=> {
+        accounts[email] = {email: email, pw: pw, name: name, rank: 0};
+        this.setRoute('login');
+    }
+
+    handleLogin = (email, pw)=> {
+        console.log(`Authenticating ${email}...`);
+        let user = this.getUser(email, pw);
+        if (user) {
+            this.setState({currentUser: user, route: 'home'});
+        } else {
+            console.log("We don't know you. Do you wanna register?");
+        }
+    }
+
+    getUser = (email, pw)=> {
+        let user = accounts[email];
+        return (user && user.pw === pw) ? user : null;
+    }
+
+    setRoute = (route)=> {
+        switch (route) {
+            case 'home':
+            case 'login':
+            case 'register':
+                this.setState({route: route});
+                break;
+            case 'logout':
+                this.setState({route: 'login', currentUser: null});
+                break;
+            default:
+                console.log(`Unknown route: /${route}`);
+        }
     }
 
     showPicture = (url) => {
@@ -79,6 +127,11 @@ class App extends Component {
                 //     console.log('Regions: ', regions);
                 //     return regions;
                 // })
+                .then(boxes=> {
+                    let {currentUser} = this.state;
+                    currentUser.rank += 1;
+                    return boxes;
+                })
                 .then(boxes=> this.setState({boxes: boxes}))
                 .catch(reason=> console.log(`Fail: ${reason}`));
         });
