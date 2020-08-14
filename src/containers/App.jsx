@@ -88,10 +88,19 @@ class App extends Component {
         console.log(`Authenticating ${email}...`);
         let user = this.getUser(email, pw);
         if (user) {
-            this.setState({currentUser: user, route: 'home'});
+            this.login(user)
         } else {
             console.log("We don't know you. Do you wanna register?");
         }
+    }
+
+    login = (user)=> {
+        this.setState({
+            currentUser: (user? user : this.state.currentUser),
+            route: 'home',
+            imageUrl: null,
+            boxes: [],
+        })
     }
 
     getUser = (email, pw)=> {
@@ -102,6 +111,8 @@ class App extends Component {
     setRoute = (route)=> {
         switch (route) {
             case 'home':
+                this.login(null);
+                break;
             case 'login':
             case 'register':
                 this.setState({route: route});
@@ -116,17 +127,17 @@ class App extends Component {
 
     showPicture = (url) => {
         this.setState({imageUrl: url, boxes: []}, ()=> {
-            // console.log(`Processing picture using AI: ${url}`);
+            console.log(`Doing some hectic AI stuff on image: ${url}`);
             clarifai.models.predict(Clarifai.FACE_DETECT_MODEL, url)
                 .then(json=> {
                     // console.log('Success: ', json);
                     return json;
                 })
                 .then(this.parseResult)
-                // .then(regions=> {
-                //     console.log('Regions: ', regions);
-                //     return regions;
-                // })
+                .then(regions=> {
+                    console.log(`Found ${regions.length} faces`);
+                    return regions;
+                })
                 .then(boxes=> {
                     let {currentUser} = this.state;
                     currentUser.rank += 1;
