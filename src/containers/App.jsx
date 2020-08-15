@@ -45,7 +45,7 @@ const particlesOptions = {
 
 const clarifai = new Clarifai.App({apiKey: 'a59ba2e1355547f7a6a3636902cb7e8d'})
 
-const accounts = new Map();
+const backend = {url: 'http://localhost:3001'};
 
 class App extends Component {
     constructor(props) {
@@ -80,18 +80,32 @@ class App extends Component {
     }
 
     handleRegistration = (email, pw, name)=> {
-        accounts[email] = {email: email, pw: pw, name: name, rank: 0};
-        this.setRoute('login');
+        this.post('/register', {email: email, pw: pw, name: name, rank: 0})
+            .then(json=> {
+                if (json.error) {
+                    console.log('User registration failed:', json.error);
+                    this.setRoute('register');
+                } else {
+                    console.log('Account registered:', json.user);
+                    this.setRoute('login');
+                }
+            });
     }
 
     handleLogin = (email, pw)=> {
         console.log(`Authenticating ${email}...`);
-        let user = this.getUser(email, pw);
-        if (user) {
-            this.login(user)
-        } else {
-            console.log("We don't know you. Do you wanna register?");
-        }
+        this.put('/login', {email: email, password: pw})
+            .then(json=> {
+                if (json.error) {
+                    console.log("Login failed");
+                } else {
+                    if (!json.user) {
+                        console.log("Something went wrong");
+                        return;
+                    }
+                    this.login(json.user)
+                }
+            })
     }
 
     login = (user)=> {
@@ -101,11 +115,6 @@ class App extends Component {
             imageUrl: null,
             boxes: [],
         })
-    }
-
-    getUser = (email, pw)=> {
-        let user = accounts[email];
-        return (user && user.pw === pw) ? user : null;
     }
 
     setRoute = (route)=> {
@@ -138,13 +147,19 @@ class App extends Component {
                     console.log(`Found ${regions.length} faces`);
                     return regions;
                 })
-                .then(boxes=> {
-                    let {currentUser} = this.state;
-                    currentUser.rank += 1;
-                    return boxes;
-                })
                 .then(boxes=> this.setState({boxes: boxes}))
-                .catch(reason=> console.log(`Fail: ${reason}`));
+                .then(_=> {
+                    this.put('/image', {user: this.state.currentUser, url: url})
+                        .then(resp=> {
+                            if (!resp.error) {
+                                this.setState({currentUser: resp.user})
+                            }
+                        });
+                })
+                .catch(reason=> {
+                    console.log(`Fail: ${reason}`);
+                    this.setState({imageUrl: null});
+                });
         });
     }
 
@@ -154,9 +169,35 @@ class App extends Component {
             console.log(`API Error (${output.status.code}): `, output.status.description);
             return [];
         }
-        return output.data.regions.map(region=> {
+        let regions = output.data.regions;
+        return regions? output.data.regions.map(region=> {
             return region.region_info.bounding_box;
+        }): [];
+    }
+
+    post = async function(route, data = {}) {
+        console.log('debug: POST ', route);
+        let resp = await fetch(`${backend.url}${route}`, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data),
         });
+        return resp.json();
+    }
+
+    put = async function(route, data = {}) {
+        console.log('debug: PUT ', route);
+        let resp = await fetch(`${backend.url}${route}`, {
+            method: 'PUT',
+            mode: 'cors',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json'},
+            referrerPolicy: 'same-origin',
+            body: JSON.stringify(data),
+        });
+        return resp.json();
     }
 
 }
