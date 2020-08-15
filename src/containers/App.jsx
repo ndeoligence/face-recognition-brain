@@ -45,8 +45,6 @@ const particlesOptions = {
 
 const clarifai = new Clarifai.App({apiKey: 'a59ba2e1355547f7a6a3636902cb7e8d'})
 
-const backend = {url: 'http://localhost:3001'};
-
 class App extends Component {
     constructor(props) {
         super(props);
@@ -177,7 +175,7 @@ class App extends Component {
 
     post = async function(route, data = {}) {
         console.log('debug: POST ', route);
-        let resp = await fetch(`${backend.url}${route}`, {
+        let resp = await fetch(route, {
             method: 'POST',
             mode: 'cors',
             credentials: 'same-origin',
@@ -189,7 +187,7 @@ class App extends Component {
 
     put = async function(route, data = {}) {
         console.log('debug: PUT ', route);
-        let resp = await fetch(`${backend.url}${route}`, {
+        let resp = await fetch(route, {
             method: 'PUT',
             mode: 'cors',
             credentials: 'same-origin',

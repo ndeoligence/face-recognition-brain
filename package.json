@@ -1,8 +1,9 @@
 {
-  "name": "face-recognition-brain",
+  "name": "smart-brain-web",
   "version": "0.1.0",
   "private": true,
   "homepage": "https://ndeoligence.github.io/face-recognition-brain",
+  "proxy": "http://localhost:3001",
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
